@@ -1,0 +1,50 @@
+// Listen for input on the password field
+document.getElementById('password').addEventListener('input', function () {
+    const password = this.value;
+    const strengthMessage = document.getElementById('strength-message');
+    const criteriaContainer = document.getElementById('criteria-container');
+
+    if (password.length === 0) {
+        strengthMessage.textContent = '';
+        strengthMessage.className = '';
+        criteriaContainer.innerHTML = ''; // Clear criteria when password is empty
+        return;
+    }
+
+    let strength = 0;
+    let requirements = [
+        { check: password.length >= 8, message: 'Make your password at least 8 characters long.' },
+        { check: /[A-Z]/.test(password), message: 'Add an uppercase letter.' },
+        { check: /[a-z]/.test(password), message: 'Add a lowercase letter.' },
+        { check: /[0-9]/.test(password), message: 'Include at least one number.' },
+        { check: /[^A-Za-z0-9]/.test(password), message: 'Include a special character (e.g., @, #, !).' },
+    ];
+
+    // Update criteria container with the list of requirements
+    let criteriaHtml = '';
+    requirements.forEach(req => {
+        criteriaHtml += `<p class="${req.check ? 'completed' : ''}">${req.message}</p>`;
+    });
+
+    criteriaContainer.innerHTML = criteriaHtml;
+
+    // Calculate password strength
+    strength = requirements.filter(req => req.check).length;
+
+    if (strength <= 2) {
+        strengthMessage.textContent = 'Weak';
+        strengthMessage.className = 'weak';
+    } else if (strength === 3 || strength === 4) {
+        strengthMessage.textContent = 'Medium';
+        strengthMessage.className = 'medium';
+    } else {
+        strengthMessage.textContent = 'Strong';
+        strengthMessage.className = 'strong';
+    }
+});
+
+// Toggle password visibility
+document.getElementById('toggle-password').addEventListener('click', function() {
+    const passwordField = document.getElementById('password');
+    passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
+});

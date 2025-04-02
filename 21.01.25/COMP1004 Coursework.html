@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Strength Checker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Password Strength Checker</h1>
+        <p id="strength-message"></p>
+        <div class="password-container">
+            <input type="password" id="password" placeholder="Enter your password">
+            <!-- Button to toggle password visibility with SVG eye icon -->
+            <button type="button" id="toggle-password" class="toggle-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 10C1 10 4 4 10 4C14.43 4 17.72 7.29 19 10C17.72 12.71 14.43 16 10 16C4 16 1 10 1 10Z"></path>
+                    <path d="M10 10C10 11.66 9.33 13 8 13C6.67 13 6 11.66 6 10C6 8.34 6.67 7 8 7C9.33 7 10 8.34 10 10Z"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="criteria-container"></div>
+    </div>
+
+    <script src="script.json"></script>
+</body>
+</html>
