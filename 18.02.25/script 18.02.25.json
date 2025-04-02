@@ -1,0 +1,151 @@
+// Randomly generate a target sum for the numbers in the password
+const targetSum = Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+const targetSumMessage = `Target sum for all digits in password: ${targetSum}`;
+
+// Listen for input on the password field
+document.getElementById('password').addEventListener('input', function () {
+    const password = this.value;
+    const strengthMessage = document.getElementById('strength-message');
+    const crackTimeMessage = document.getElementById('crack-time');
+    const promptsContainer = document.getElementById('prompts-container');
+
+    if (password.length === 0) {
+        strengthMessage.textContent = '';
+        crackTimeMessage.textContent = '';
+        strengthMessage.className = '';
+        promptsContainer.innerHTML = ''; // Clear prompts when password is empty
+        promptsContainer.style.display = 'none'; // Hide prompts container
+        return;
+    }
+
+    promptsContainer.style.display = 'block'; // Show prompts only when typing starts
+
+    let strength = 0;
+    let requirements = [
+        { check: password.length >= 8, message: 'Make your password at least 8 characters long.', fulfilled: false, id: 'prompt-1' },
+        { check: /[A-Z]/.test(password), message: 'Add an uppercase letter.', fulfilled: false, id: 'prompt-2' },
+        { check: /[a-z]/.test(password), message: 'Add a lowercase letter.', fulfilled: false, id: 'prompt-3' },
+        { check: /[0-9]/.test(password), message: 'Include at least one number.', fulfilled: false, id: 'prompt-4' },
+        { check: /[^A-Za-z0-9]/.test(password), message: 'Include a special character (e.g., @, #, !).', fulfilled: false, id: 'prompt-5' },
+        { check: /(red|orange|yellow|green|blue|indigo|violet)/i.test(password), message: 'Includes a colour of the rainbow', fulfilled: false, id: 'prompt-6' } // Rainbow color prompt
+    ];
+
+    // Determine the first unmet requirement
+    let firstUnmet = requirements.find(req => !req.check && !req.fulfilled);
+
+    // Update prompts container to show the first unmet requirement
+    let promptsHtml = '';
+    requirements.forEach(req => {
+        if (!req.fulfilled) {
+            promptsHtml += `<div class="prompt" id="${req.id}">${req.message}</div>`;
+        }
+    });
+
+    promptsContainer.innerHTML = promptsHtml;
+
+    // After symbol prompt is shown, display the target sum message as a prompt
+    if (/[^A-Za-z0-9]/.test(password) && !promptsContainer.innerHTML.includes(targetSumMessage)) {
+        promptsContainer.innerHTML += `<div class="prompt" id="sum-prompt">${targetSumMessage}</div>`;
+    }
+
+    // Calculate password strength
+    strength = requirements.filter(req => req.check).length;
+
+    if (strength <= 2) {
+        strengthMessage.textContent = 'Weak';
+        strengthMessage.className = 'weak';
+    } else if (strength === 3 || strength === 4) {
+        strengthMessage.textContent = 'Medium';
+        strengthMessage.className = 'medium';
+    } else {
+        strengthMessage.textContent = 'Strong';
+        strengthMessage.className = 'strong';
+    }
+
+    // Estimate password cracking time
+    const crackTime = estimateCrackTime(password);
+    crackTimeMessage.textContent = `Estimated time to guess: ${crackTime}`;
+
+    // Ensure the sum of the numbers in the password matches the target sum
+    const numbersInPassword = password.match(/\d/g);
+    let sum = 0;
+    if (numbersInPassword) {
+        sum = numbersInPassword.reduce((acc, num) => acc + parseInt(num), 0);
+    }
+
+    const sumMessage = `The sum of numbers in the password should be ${targetSum}. Currently, it is ${sum}.`;
+    const sumPrompt = document.getElementById('sum-prompt');
+    if (numbersInPassword && sum === targetSum && sumPrompt) {
+        // Mark sum prompt as fulfilled
+        sumPrompt.classList.add('completed');
+        sumPrompt.style.marginTop = '2vh';
+    } else {
+        // Add or update the sum prompt
+        if (sumPrompt) {
+            sumPrompt.textContent = sumMessage;
+        } else {
+            promptsContainer.innerHTML += `<div class="prompt" id="sum-prompt">${sumMessage}</div>`;
+        }
+    }
+
+    // Mark fulfilled prompts with green color and push them down
+    requirements.forEach((req, index) => {
+        if (req.check && !req.fulfilled) {
+            const promptElem = document.getElementById(req.id);
+            promptElem.classList.add('completed');
+            promptElem.style.marginTop = '2vh'; // Move completed prompt down
+            req.fulfilled = true; // Mark as fulfilled
+        }
+    });
+});
+
+// Function to estimate time to crack a password using multiplication
+function estimateCrackTime(password) {
+    let totalTime = BigInt(1);
+
+    for (let char of password) {
+        let charValue = BigInt(1);
+
+        if (char >= 'a' && char <= 'z') {
+            charValue = BigInt(char.charCodeAt(0) - 96);
+        } else if (char >= 'A' && char <= 'Z') {
+            charValue = BigInt(char.charCodeAt(0) - 38);
+        } else if (char >= '0' && char <= '9') {
+            charValue = BigInt(char.charCodeAt(0) - 21);
+        } else {
+            charValue = BigInt(50);
+        }
+
+        totalTime *= charValue;
+    }
+
+    totalTime = totalTime / BigInt(1000000);
+    return formatTime(totalTime);
+}
+
+// Function to format time from seconds to human-readable format
+function formatTime(seconds) {
+    let time = Number(seconds);
+
+    if (time < 60) return `${time.toFixed(2)} seconds`;
+    time /= 60;
+    if (time < 60) return `${time.toFixed(2)} minutes`;
+    time /= 60;
+    if (time < 24) return `${time.toFixed(2)} hours`;
+    time /= 24;
+    if (time < 365) return `${time.toFixed(2)} days`;
+    time /= 365;
+    return `${time.toFixed(2)} years`;
+}
+
+// Toggle password visibility
+document.getElementById('toggle-password').addEventListener('click', function() {
+    const passwordField = document.getElementById('password');
+    passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
+});
+
+// Automatically resize the textarea as the user types
+document.getElementById('password').addEventListener('input', function () {
+    this.style.height = 'auto'; // Reset height to auto before recalculating
+    this.style.height = (this.scrollHeight) + 'px'; // Adjust the height based on scroll height
+});

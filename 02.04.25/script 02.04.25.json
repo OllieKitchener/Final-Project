@@ -1,0 +1,266 @@
+// Generate a random checksum value between 50 and 100
+const targetSum = Math.floor(Math.random() * (100 - 50 + 1)) + 50; 
+
+// Get references to various elements in the single-page application (SPA)
+const passwordField = document.getElementById("password"); // Password input field
+const strengthMessage = document.getElementById("strength-message"); // Displays password strength
+const crackTimeMessage = document.getElementById("crack-time"); // Displays estimated crack time
+const promptsContainer = document.getElementById("prompts-container"); // Container for unmet prompts
+const togglePasswordButton = document.getElementById("toggle-password"); // Button to toggle password visibility
+const nameField = document.getElementById("name"); // Name input field
+const downloadBtn = document.getElementById("download-btn"); // Download button for the leaderboard
+
+// Create a leaderboard container and add it to the document body
+const leaderboardContainer = document.createElement("div"); 
+leaderboardContainer.id = "leaderboard-container"; 
+document.body.appendChild(leaderboardContainer); 
+
+// Timer variables
+let timer = 0; // Tracks the time taken to create a password
+let interval = null; // Holds the timer interval
+let allCriteriaMet = false; // Indicates whether all password criteria are met
+
+// Create and initialize a timer display element
+const timerDisplay = document.createElement("div"); 
+timerDisplay.id = "timer-display";
+timerDisplay.textContent = "Time: 0s"; // Start timer at 0 seconds
+document.body.appendChild(timerDisplay);
+
+// Function to generate a random CAPTCHA
+function generateCaptcha() {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; // Characters allowed in CAPTCHA
+    let captcha = ""; // Initialize an empty CAPTCHA string
+    for (let i = 0; i < 6; i++) { // Generate a 6-character CAPTCHA
+        captcha += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return captcha;
+}
+
+// Store the generated CAPTCHA in a variable
+let generatedCaptcha = generateCaptcha();
+
+// Start the timer if it's not already running and criteria are not met
+function startTimer() {
+    if (interval || allCriteriaMet) return;
+    interval = setInterval(() => {
+        timer++; // Increment the timer every second
+        timerDisplay.textContent = `Time: ${timer}s`; // Update the timer display
+    }, 1000);
+}
+
+// Stop the timer by clearing the interval
+function stopTimer() {
+    clearInterval(interval);
+    interval = null;
+}
+
+// Reset the timer and display
+function resetTimer() {
+    clearInterval(interval);
+    timer = 0;
+    timerDisplay.textContent = "Time: 0s"; // Reset the timer display to 0
+    interval = null;
+    allCriteriaMet = false; // Reset the criteria flag
+    timerDisplay.style.display = "block"; // Ensure the timer is visible
+}
+
+// Event listener to handle password input and initiate password evaluation
+passwordField.addEventListener("input", function () {
+    if (!nameField.value) { // Ensure the name field is filled out first
+        alert("Please enter your name before typing the password.");
+        passwordField.disabled = true; // Disable the password field if no name
+        return;
+    }
+
+    passwordField.disabled = false; // Enable the password field
+    startTimer(); // Start the timer when typing begins
+    evaluatePasswordStrength(passwordField.value); // Evaluate the entered password
+});
+
+// Function to evaluate the strength of the entered password
+function evaluatePasswordStrength(password) {
+    // If the password is empty, reset related fields and the timer
+    if (password.length === 0) {
+        strengthMessage.textContent = ""; // Clear strength message
+        crackTimeMessage.textContent = ""; // Clear crack time message
+        promptsContainer.innerHTML = ""; // Clear the prompts container
+        promptsContainer.style.display = "none"; // Hide the prompts
+        resetTimer(); // Reset the timer
+        return;
+    }
+
+    // Display the prompts container when the password is being evaluated
+    promptsContainer.style.display = "block";
+
+    // Array of requirements for a valid password
+    let requirements = [
+        { check: password.length >= 8, message: "Make your password at least 8 characters long.", id: "prompt-1" },
+        { check: /[A-Z]/.test(password), message: "Include an uppercase letter.", id: "prompt-2" },
+        { check: /[a-z]/.test(password), message: "Include a lowercase letter.", id: "prompt-3" },
+        { check: /[0-9]/.test(password), message: "Include at least one number.", id: "prompt-4" },
+        { check: /[^A-Za-z0-9]/.test(password), message: "Include a special character.", id: "prompt-5" },
+        { check: /(red|orange|yellow|green|blue|indigo|violet)/i.test(password), message: "Include a color of the rainbow.", id: "prompt-6" },
+        { check: isChecksumCorrect(password), message: `The sum of the individual digits in your password should add up to exactly ${targetSum}. Currently, it is ${getCurrentSum(password)}.`, id: "prompt-7" },
+        { check: isCaptchaCorrect(password), message: `We just need to check that you are not a robot, could you please enter the following CAPTCHA: ${generatedCaptcha}.`, id: "prompt-8" }
+    ];
+
+    // Filter out unmet requirements from the list
+    const unmetRequirements = requirements.filter(req => !req.check);
+    let strength = 8 - unmetRequirements.length; // Calculate strength based on unmet requirements
+
+    // Check if all criteria are met
+    if (unmetRequirements.length === 0) {
+        allCriteriaMet = true;
+        stopTimer(); // Stop the timer when criteria are met
+        promptsContainer.style.display = "none"; // Hide the prompts container
+        showLeaderboard(); // Display the leaderboard
+    }
+
+    // Update the strength message based on the calculated strength
+    if (strength <= 3) {
+        strengthMessage.textContent = "Weak";
+        strengthMessage.className = "weak";
+    } else if (strength <= 7) {
+        strengthMessage.textContent = "Medium";
+        strengthMessage.className = "medium";
+    } else {
+        strengthMessage.textContent = "Strong";
+        strengthMessage.className = "strong";
+    }
+
+    // Estimate the crack time and update the message
+    const crackTime = estimateCrackTime(password);
+    crackTimeMessage.textContent = `Estimated time to guess: ${crackTime}`;
+
+    updatePrompts(unmetRequirements); // Display unmet requirements
+}
+
+// Check if the CAPTCHA is correctly included in the password
+function isCaptchaCorrect(password) {
+    return password.includes(generatedCaptcha); 
+}
+
+// Calculate the sum of all digits in the password
+function getCurrentSum(password) {
+    const numbersInPassword = password.match(/\d/g); // Extract digits
+    if (!numbersInPassword) return 0;
+    return numbersInPassword.reduce((acc, num) => acc + parseInt(num), 0);
+}
+
+// Check if the checksum of digits matches the target sum
+function isChecksumCorrect(password) {
+    const numbersInPassword = password.match(/\d/g); 
+    let sum = 0;
+    if (numbersInPassword) {
+        sum = numbersInPassword.reduce((acc, num) => acc + parseInt(num), 0);
+    }
+    return sum === targetSum;
+}
+
+// Update the prompt messages with unmet requirements
+function updatePrompts(unmetRequirements) {
+    promptsContainer.innerHTML = ""; // Clear previous prompts
+
+    unmetRequirements.forEach(requirement => {
+        let promptElement = document.createElement("div");
+        promptElement.classList.add("prompt");
+        promptElement.id = requirement.id;
+        promptElement.textContent = requirement.message;
+        promptsContainer.appendChild(promptElement);
+    });
+}
+
+// Estimate the time it would take to crack the password
+function estimateCrackTime(password) {
+    let totalTime = BigInt(1);
+
+    // Calculate estimated time based on character types
+    for (let char of password) {
+        let charValue = BigInt(1);
+
+        if (char >= "a" && char <= "z") {
+            charValue = BigInt(char.charCodeAt(0) - 96);
+        } else if (char >= "A" && char <= "Z") {
+            charValue = BigInt(char.charCodeAt(0) - 38);
+        } else if (char >= "0" && char <= "9") {
+            charValue = BigInt(char.charCodeAt(0) - 21);
+        } else {
+            charValue = BigInt(50); // Special characters are treated with higher value
+        }
+
+        totalTime *= charValue; // Multiply the total time by the character value
+    }
+
+    totalTime = totalTime / BigInt(1000000); // Adjust for better readability
+    return formatTime(totalTime);
+}
+
+// Format the estimated crack time into human-readable units
+function formatTime(seconds) {
+    let time = Number(seconds);
+
+    if (time < 60) return `${time.toFixed(2)} seconds`;
+    time /= 60;
+    if (time < 60) return `${time.toFixed(2)} minutes`;
+    time /= 60;
+    if (time < 24) return `${time.toFixed(2)} hours`;
+    time /= 24;
+    if (time < 365) return `${time.toFixed(2)} days`;
+    time /= 365;
+    return `${time.toFixed(2)} years`;
+}
+
+// Resize the password field based on input length
+passwordField.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
+});
+
+// Enable password field if name field has been filled out
+nameField.addEventListener("input", function () {
+    passwordField.disabled = !nameField.value;
+    if (!nameField.value) {
+        resetTimer();
+        timerDisplay.textContent = "Time: 0s";
+    }
+});
+
+// Download the leaderboard data as a JSON file
+function downloadLeaderboard() {
+    const leaderboardData = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+    const userData = { username: nameField.value, time: timer };
+    leaderboardData.push(userData);
+    leaderboardData.sort((a, b) => a.time - b.time); 
+    leaderboardData.splice(10); 
+
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboardData));
+
+    const leaderboardBlob = new Blob([JSON.stringify(leaderboardData, null, 2)], { type: "application/json" });
+    const leaderboardLink = document.createElement("a");
+    leaderboardLink.href = URL.createObjectURL(leaderboardBlob);
+    leaderboardLink.download = "leaderboard.json";
+    leaderboardLink.click();
+}
+
+// Display the leaderboard from local storage
+function showLeaderboard() {
+    const leaderboardData = JSON.parse(localStorage.getItem("leaderboard")) || [];
+    leaderboardContainer.innerHTML = "<h3>Leaderboard</h3>";
+    leaderboardData.forEach((entry, index) => {
+        const leaderboardEntry = document.createElement("div");
+        leaderboardEntry.textContent = `${index + 1}. ${entry.username}: ${entry.time}s`;
+        leaderboardContainer.appendChild(leaderboardEntry);
+    });
+    leaderboardContainer.style.display = "block";
+}
+
+// Show the download button if all criteria are met
+passwordField.addEventListener("input", function () {
+    if (allCriteriaMet) {
+        downloadBtn.style.display = "inline-block";
+        downloadBtn.disabled = false;
+    }
+});
+
+downloadBtn.addEventListener("click", downloadLeaderboard);

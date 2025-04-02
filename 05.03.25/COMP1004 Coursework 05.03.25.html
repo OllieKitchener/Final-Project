@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Strength Checker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Password Strength Checker</h1>
+        
+        <!-- New name input field -->
+        <input type="text" id="name" placeholder="Enter your name" class="name-input" />
+
+        <p id="strength-message"></p>
+        <div class="password-container">
+            <textarea id="password" placeholder="Enter your password"></textarea>
+        </div>
+        <p id="additional-message"></p>
+        <p id="crack-time"></p>
+    </div>
+    <div id="prompts-container" class="prompts-container"></div>
+
+    <!-- Download Button container -->
+    <div id="download-container" class="download-container">
+        <button id="download-btn" class="download-btn" disabled>Download Data</button>
+    </div>
+
+    <script src="script.json"></script>
+</body>
+</html>

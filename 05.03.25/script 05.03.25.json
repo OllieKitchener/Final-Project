@@ -1,0 +1,246 @@
+const targetSum = Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+const targetSumMessage = `Target sum for all digits in password: ${targetSum}`;
+
+const passwordField = document.getElementById("password");
+const strengthMessage = document.getElementById("strength-message");
+const crackTimeMessage = document.getElementById("crack-time");
+const promptsContainer = document.getElementById("prompts-container");
+const togglePasswordButton = document.getElementById("toggle-password");
+const nameField = document.getElementById("name");
+const downloadBtn = document.getElementById("download-btn");
+
+let timer = 0;
+let interval = null;
+let allCriteriaMet = false;
+let usersData = [];  // To store user name and time
+
+// Create and position the timer display
+const timerDisplay = document.createElement("div");
+timerDisplay.id = "timer-display";
+timerDisplay.textContent = "Time: 0s";
+document.body.appendChild(timerDisplay);
+
+// Start the timer when typing begins
+function startTimer() {
+    if (interval || allCriteriaMet) return;
+    interval = setInterval(() => {
+        timer++;
+        timerDisplay.textContent = `Time: ${timer}s`;
+    }, 1000);
+}
+
+// Stop the timer once all conditions are met
+function stopTimer() {
+    clearInterval(interval);
+    interval = null;
+}
+
+// Reset the timer when the password is cleared
+function resetTimer() {
+    clearInterval(interval);
+    timer = 0;
+    timerDisplay.textContent = "Time: 0s";
+    interval = null;
+    allCriteriaMet = false;
+    timerDisplay.style.display = "block"; // Ensure timer is visible again if cleared
+}
+
+passwordField.addEventListener("input", function () {
+    // Check if the name field is filled
+    if (!nameField.value) {
+        alert("Please enter your name before typing the password.");
+        passwordField.disabled = true; // Disable password field
+        return; // Exit the function, preventing further processing
+    }
+
+    // If the name field is filled, enable password field
+    passwordField.disabled = false;
+    startTimer();
+    evaluatePasswordStrength(passwordField.value);
+});
+
+// Function to evaluate password strength and prompts
+function evaluatePasswordStrength(password) {
+    if (password.length === 0) {
+        strengthMessage.textContent = "";
+        crackTimeMessage.textContent = "";
+        promptsContainer.innerHTML = "";
+        promptsContainer.style.display = "none";
+        resetTimer();
+        return;
+    }
+
+    promptsContainer.style.display = "block";
+
+    let requirements = [
+        { check: password.length >= 8, message: "Make your password at least 8 characters long.", id: "prompt-1" },
+        { check: /[A-Z]/.test(password), message: "Add an uppercase letter.", id: "prompt-2" },
+        { check: /[a-z]/.test(password), message: "Add a lowercase letter.", id: "prompt-3" },
+        { check: /[0-9]/.test(password), message: "Include at least one number.", id: "prompt-4" },
+        { check: /[^A-Za-z0-9]/.test(password), message: "Include a special character.", id: "prompt-5" },
+        { check: /(red|orange|yellow|green|blue|indigo|violet)/i.test(password), message: "Include a color of the rainbow.", id: "prompt-6" }
+    ];
+
+    let unmetRequirements = requirements.filter(req => !req.check);
+    let strength = 6 - unmetRequirements.length;
+
+    // Stop the timer if all conditions are met
+    if (unmetRequirements.length === 0) {
+        allCriteriaMet = true;
+        stopTimer();
+    }
+
+    // Set strength levels
+    if (strength <= 2) {
+        strengthMessage.textContent = "Weak";
+        strengthMessage.className = "weak";
+    } else if (strength === 3 || strength === 4) {
+        strengthMessage.textContent = "Medium";
+        strengthMessage.className = "medium";
+    } else {
+        strengthMessage.textContent = "Strong";
+        strengthMessage.className = "strong";
+    }
+
+    // Estimate password cracking time
+    const crackTime = estimateCrackTime(password);
+    crackTimeMessage.textContent = `Estimated time to guess: ${crackTime}`;
+
+    // Update prompts container
+    updatePrompts(unmetRequirements);
+
+    // Ensure the sum of the numbers in the password matches the target sum
+    const numbersInPassword = password.match(/\d/g);
+    let sum = 0;
+    if (numbersInPassword) {
+        sum = numbersInPassword.reduce((acc, num) => acc + parseInt(num), 0);
+    }
+
+    const sumMessage = `The sum of numbers in the password should be ${targetSum}. Currently, it is ${sum}.`;
+    const sumPrompt = document.getElementById("sum-prompt");
+
+    if (numbersInPassword && sum === targetSum) {
+        // Mark the sum prompt as completed
+        if (sumPrompt) {
+            sumPrompt.classList.add("completed");
+            sumPrompt.style.marginTop = "2vh";
+            sumPrompt.textContent = `Sum is correct! The sum is ${sum}.`;  // Optional: Update the message
+        }
+        // Hide the sum prompt when fulfilled
+        setTimeout(() => {
+            sumPrompt.style.display = 'none';
+        }, 1000); // Optionally, wait 1 second before hiding it for better UX
+    } else {
+        if (sumPrompt) {
+            sumPrompt.textContent = sumMessage;
+            sumPrompt.style.display = 'block';  // Ensure it's visible if the sum is not correct
+        } else {
+            promptsContainer.innerHTML += `<div class="prompt" id="sum-prompt">${sumMessage}</div>`;
+        }
+    }
+}
+
+// Function to update password prompts
+function updatePrompts(unmetRequirements) {
+    promptsContainer.innerHTML = "";
+    if (unmetRequirements.length > 0) {
+        promptsContainer.style.display = "block";
+        unmetRequirements.forEach(req => {
+            let prompt = document.createElement("div");
+            prompt.classList.add("prompt");
+            prompt.id = req.id;
+            prompt.textContent = req.message;
+            promptsContainer.appendChild(prompt);
+        });
+    } else {
+        promptsContainer.style.display = "none";
+    }
+}
+
+// Function to estimate time to crack a password
+function estimateCrackTime(password) {
+    let totalTime = BigInt(1);
+
+    for (let char of password) {
+        let charValue = BigInt(1);
+
+        if (char >= "a" && char <= "z") {
+            charValue = BigInt(char.charCodeAt(0) - 96);
+        } else if (char >= "A" && char <= "Z") {
+            charValue = BigInt(char.charCodeAt(0) - 38);
+        } else if (char >= "0" && char <= "9") {
+            charValue = BigInt(char.charCodeAt(0) - 21);
+        } else {
+            charValue = BigInt(50);
+        }
+
+        totalTime *= charValue;
+    }
+
+    totalTime = totalTime / BigInt(1000000);
+    return formatTime(totalTime);
+}
+
+// Function to format time into human-readable format
+function formatTime(seconds) {
+    let time = Number(seconds);
+
+    if (time < 60) return `${time.toFixed(2)} seconds`;
+    time /= 60;
+    if (time < 60) return `${time.toFixed(2)} minutes`;
+    time /= 60;
+    if (time < 24) return `${time.toFixed(2)} hours`;
+    time /= 24;
+    if (time < 365) return `${time.toFixed(2)} days`;
+    time /= 365;
+    return `${time.toFixed(2)} years`;
+}
+
+// Automatically resize the textarea as the user types
+passwordField.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
+});
+
+// Disable password input until name is filled
+nameField.addEventListener("input", function () {
+    if (!nameField.value) {
+        passwordField.disabled = true; // Disable password field when name is empty
+    } else {
+        passwordField.disabled = false; // Enable password field when name is filled
+    }
+    if (!nameField.value) {
+        resetTimer(); // Reset timer if name is cleared
+        timerDisplay.textContent = "Time: 0s";
+    }
+});
+
+// Function to download JSON file with username and time
+function downloadJSON() {
+    const userData = {
+        username: nameField.value,
+        time: timer
+    };
+
+    const json = JSON.stringify(userData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "user_data.json";
+    link.click();
+}
+
+// Show the download button when all criteria are met
+function showDownloadButton() {
+    downloadBtn.style.display = "inline-block";
+    downloadBtn.disabled = false; // Enable the button once all criteria are met
+}
+
+passwordField.addEventListener("input", function () {
+    if (allCriteriaMet) {
+        showDownloadButton(); // Show download button when criteria met
+    }
+});
+
+// Add event listener to the download button
+downloadBtn.addEventListener("click", downloadJSON);
